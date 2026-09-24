@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E161F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Grid Arbitrage — Power Trading Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0E161F;
+    --panel: #161F2A;
+    --panel-alt: #1C2733;
+    --grid-line: #263442;
+    --text: #E9EDF2;
+    --text-dim: #8496A8;
+    --text-faint: #566575;
+    --buy: #45B8C9;
+    --buy-dim: rgba(69,184,201,0.18);
+    --sell: #F2843B;
+    --sell-dim: rgba(242,132,59,0.18);
+    --profit: #4CAF7D;
+    --loss: #E4573D;
+    --hold: #2A3846;
+    --event: #C98BD9;
+    --peak: #F2843B;
+    --trough: #45B8C9;
+    --gradeS: #4CAF7D;
+    --gradeA: #7FC98F;
+    --gradeB: #E8C15B;
+    --gradeC: #F2843B;
+    --gradeD: #E4573D;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  .app{ max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .header{
+    display:flex; justify-content: space-between; align-items: flex-start;
+    gap: 20px; border-bottom: 1px solid var(--grid-line);
+    padding-bottom: 18px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .brand-line{ display:flex; align-items:baseline; gap:10px; }
+  .brand-mark{ width: 10px; height: 10px; background: var(--sell); display:inline-block; border-radius: 1px; }
+  h1{ font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .subtitle{ color: var(--text-dim); font-size: 13.5px; margin-top: 4px; max-width: 480px; line-height: 1.5; }
+  .pnl-block{ text-align: right; }
+  .pnl-label{ color: var(--text-dim); font-size: 11.5px; margin-bottom: 4px; }
+  .pnl-value{ font-size: 30px; font-weight: 500; line-height: 1; }
+  .pnl-value.pos{ color: var(--profit); }
+  .pnl-value.neg{ color: var(--loss); }
+  .pnl-value.zero{ color: var(--text); }
+
+  .tabbar{
+    display:flex; gap:4px; margin-bottom: 16px; border: 1px solid var(--grid-line);
+    border-radius: 6px; padding: 4px; background: var(--panel); width: fit-content; flex-wrap: wrap;
+  }
+  .tab-btn{
+    font-family:'Space Grotesk',sans-serif; font-size: 13.5px; font-weight: 500;
+    padding: 8px 16px; border-radius: 4px; border: none; background: transparent;
+    color: var(--text-dim); cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+  }
+  .tab-btn.active{ background: var(--panel-alt); color: var(--text); }
+  .tab-btn .mkt-dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:7px; position:relative; top:-1px; }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  /* Day selector */
+  .day-row{ display:flex; align-items:center; justify-content: space-between; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .day-selector{ display:flex; gap:5px; flex-wrap: wrap; }
+  .day-pill{
+    font-family:'IBM Plex Mono',monospace; font-size: 11.5px; font-weight: 500;
+    padding: 7px 12px; border-radius: 4px; border: 1px solid var(--grid-line);
+    background: var(--panel-alt); color: var(--text-dim); cursor: pointer; position:relative;
+    display:flex; align-items:center; gap:6px;
+  }
+  .day-pill.active{ border-color: var(--text); color: var(--text); }
+  .day-pill .grade-dot{ display:inline-block; width:6px; height:6px; border-radius:50%; }
+  .shuffle-week-btn{ font-size: 12px; }
+
+  .panel{ background: var(--panel); border: 1px solid var(--grid-line); border-radius: 6px; padding: 18px 18px 14px; margin-bottom: 16px; }
+  .panel-title{ font-size: 12.5px; color: var(--text-dim); margin-bottom: 12px; display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap:6px; }
+  .season-badge{
+    font-family:'IBM Plex Mono',monospace; font-size: 10.5px; font-weight:600;
+    padding: 3px 8px; border-radius: 10px; letter-spacing: 0.02em;
+  }
+  .mode-note{
+    font-size: 12px; color: var(--text-faint); margin-bottom: 16px; line-height: 1.5;
+    padding: 10px 12px; background: var(--panel-alt); border-radius: 4px; border-left: 2px solid var(--sell);
+  }
+  .mode-note.rtm-note{ border-left-color: var(--event); }
+  .mode-note.cmp-note{ border-left-color: var(--profit); }
+  .mode-note b.mono{ color: var(--text); }
+
+  svg.chart{ width: 100%; height: auto; display:block; }
+  .chart-legend{ display:flex; gap:16px; font-size: 11.5px; color: var(--text-dim); margin-top: 10px; flex-wrap: wrap; }
+  .chart-actions{ display:flex; flex-direction:column; gap:8px; margin-top:16px; max-width:240px; }
+  .chart-actions button{ width:100%; }
+  .legend-item{ display:flex; align-items:center; gap:6px; }
+  .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+  .hour-grid{ display:grid; grid-template-columns: repeat(12, 1fr); gap: 6px; }
+  @media (max-width: 640px){ .hour-grid{ grid-template-columns: repeat(6, 1fr); } }
+  .hour-cell{
+    background: var(--panel-alt); border: 1px solid var(--grid-line); border-radius: 4px;
+    padding: 8px 4px 7px; text-align: center; cursor: pointer;
+    transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
+    user-select: none; position: relative;
+  }
+  .hour-cell:hover{ transform: translateY(-1px); border-color: #3A4A5C; }
+  .hour-cell.buy{ background: var(--buy-dim); border-color: var(--buy); }
+  .hour-cell.sell{ background: var(--sell-dim); border-color: var(--sell); }
+  .hour-cell .hr{ font-size: 10px; color: var(--text-faint); font-family:'IBM Plex Mono',monospace; }
+  .hour-cell .pr{ font-size: 12.5px; font-weight: 500; margin-top: 3px; font-family:'IBM Plex Mono',monospace; }
+  .hour-cell .act{ font-size: 9px; margin-top: 3px; height: 11px; color: var(--text-faint); letter-spacing: 0.02em; }
+  .hour-cell.buy .act{ color: var(--buy); }
+  .hour-cell.sell .act{ color: var(--sell); }
+  .hour-cell.optimal-mark::after{
+    content:''; position:absolute; top:3px; right:3px; width:5px; height:5px; border-radius:50%;
+    background: #E9EDF2; box-shadow: 0 0 0 2px var(--panel-alt);
+  }
+
+  .rtm-strip{ display:flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
+  .rtm-block{ width: 15px; height: 28px; border-radius: 2px; background: var(--panel-alt); border: 1px solid var(--grid-line); position: relative; }
+  .rtm-block.buy{ background: var(--buy); border-color: var(--buy); }
+  .rtm-block.sell{ background: var(--sell); border-color: var(--sell); }
+  .rtm-block.locked{ opacity: 0.35; }
+  .rtm-block.current{ box-shadow: 0 0 0 2px var(--text); }
+
+  .now-card{
+    display:flex; justify-content: space-between; align-items:center;
+    background: var(--panel-alt); border: 1px solid var(--grid-line); border-radius: 6px;
+    padding: 18px 20px; margin-bottom: 14px; flex-wrap: wrap; gap: 14px;
+  }
+  .now-time{ font-size: 12px; color: var(--text-dim); }
+  .now-price{ font-size: 32px; font-weight: 600; font-family:'IBM Plex Mono',monospace; margin-top: 2px; }
+  .now-batt{ font-size: 11.5px; color: var(--text-dim); margin-top: 6px; }
+  .now-actions-wrap{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+  .now-actions{ display:flex; gap: 8px; }
+  .now-actions-hint{ font-size: 10.5px; color: var(--text-faint); min-height: 13px; }
+
+  .progress-row{ margin-bottom: 14px; }
+  .progress-track{ height: 8px; background: var(--panel-alt); border: 1px solid var(--grid-line); border-radius: 3px; overflow: hidden; }
+  .progress-fill{ height: 100%; background: linear-gradient(90deg, var(--event), #E3B4EE); width: 0%; transition: width 0.2s ease; }
+  .progress-caption{ font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+  .act-btn{
+    font-family:'Space Grotesk',sans-serif; font-size: 13px; font-weight:500; padding: 10px 14px;
+    border-radius: 4px; border: 1px solid var(--grid-line); background: var(--panel); color: var(--text); cursor: pointer;
+  }
+  .act-btn.buy-btn.selected{ background: var(--buy); border-color: var(--buy); color:#0A1418; }
+  .act-btn.sell-btn.selected{ background: var(--sell); border-color: var(--sell); color:#1A0F06; }
+  .act-btn.hold-btn.selected{ background: var(--hold); border-color:#3A4A5C; }
+  .act-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .event-banner{
+    display:none; background: rgba(201,139,217,0.12); border: 1px solid var(--event);
+    border-radius: 5px; padding: 10px 14px; font-size: 12.5px; color: #DDB8E8; margin-bottom: 14px;
+  }
+  .event-banner.show{ display:block; }
+
+  .row{ display:grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
+  @media (max-width: 640px){ .row{ grid-template-columns: 1fr; } }
+
+  .battery-track{ height: 14px; background: var(--panel-alt); border: 1px solid var(--grid-line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .battery-fill{ height: 100%; background: linear-gradient(90deg, var(--buy), #6FD0DE); width: 0%; transition: width 0.25s ease; }
+  .battery-caption{ display:flex; justify-content: space-between; font-size: 11.5px; color: var(--text-dim); margin-top: 8px; font-family:'IBM Plex Mono',monospace; }
+
+  .stat-line{ display:flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--grid-line); font-size: 13px; }
+  .stat-line:last-child{ border-bottom: none; }
+  .stat-line .lbl{ color: var(--text-dim); }
+  .stat-line .val{ font-family:'IBM Plex Mono',monospace; font-weight:500; }
+
+  .controls{ display:flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  button{
+    font-family: 'Space Grotesk', sans-serif; font-size: 13.5px; font-weight: 500; padding: 10px 16px;
+    border-radius: 4px; border: 1px solid var(--grid-line); background: var(--panel-alt); color: var(--text);
+    cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  button:hover{ border-color: #445564; }
+  button.primary{ background: var(--sell); border-color: var(--sell); color: #14100A; }
+  button.primary:hover{ background: #ff9950; }
+  button.secondary-accent{ border-color: var(--buy); color: var(--buy); }
+  button.secondary-accent:hover{ background: var(--buy-dim); }
+  button:disabled{ opacity: 0.4; cursor: not-allowed; }
+
+  .hint{ font-size: 12px; color: var(--text-faint); margin-top: 10px; line-height: 1.5; }
+
+  .result-banner{ display:none; background: var(--panel-alt); border: 1px solid var(--grid-line); border-radius: 6px; padding: 16px 18px; margin-top: 16px; font-size: 13.5px; line-height: 1.6; }
+  .result-banner.show{ display:block; }
+  .result-banner b{ font-family:'IBM Plex Mono',monospace; }
+
+  .grade-chip{
+    display:inline-flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace;
+    font-size: 13px; font-weight:600; padding: 6px 12px; border-radius: 5px; margin-bottom: 10px;
+  }
+  .grade-chip .pct{ font-size: 18px; }
+
+  .done-banner{
+    display:none; background: var(--panel-alt); border: 1px solid var(--profit); border-radius: 6px;
+    padding: 14px 16px; font-size: 13px; color: var(--text); margin-bottom: 14px;
+  }
+  .done-banner.show{ display:block; }
+
+  /* Comparison tab */
+  .cmp-table{ width:100%; border-collapse: collapse; font-size: 13px; }
+  .cmp-table th{ text-align:left; color: var(--text-dim); font-size: 11px; font-weight:500; padding: 8px 10px; border-bottom: 1px solid var(--grid-line); }
+  .cmp-table td{ padding: 10px 10px; border-bottom: 1px solid var(--grid-line); font-family:'IBM Plex Mono',monospace; }
+  .cmp-table tr:last-child td{ border-bottom:none; }
+  .cmp-table tr.total-row td{ font-weight:700; border-top: 1px solid var(--grid-line); padding-top:12px; }
+  .cmp-bar-wrap{ display:flex; align-items:center; gap:6px; }
+  .cmp-bar{ height: 10px; border-radius: 2px; }
+  .cmp-bar.dam{ background: var(--buy); }
+  .cmp-bar.rtm{ background: var(--event); }
+  .not-played{ color: var(--text-faint); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div>
+      <div class="brand-line"><span class="brand-mark"></span><h1>Grid Arbitrage</h1></div>
+      <div class="subtitle">Trade a 6 MWh battery against constantly-shifting IEX-style prices — seasonal peaks move around, so every day is a new read.</div>
+    </div>
+    <div class="pnl-block">
+      <div class="pnl-label" id="pnlLabel">DAM · MON P&amp;L</div>
+      <div class="pnl-value zero mono" id="pnlValue">₹0</div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab-btn active" id="tabDamBtn"><span class="mkt-dot" style="background:var(--buy)"></span>Day-Ahead Market</button>
+    <button class="tab-btn" id="tabRtmBtn"><span class="mkt-dot" style="background:var(--event)"></span>Real-Time Market</button>
+    <button class="tab-btn" id="tabCmpBtn"><span class="mkt-dot" style="background:var(--profit)"></span>Weekly Comparison</button>
+  </div>
+
+  <!-- ============ DAM TAB ============ -->
+  <div class="tab-panel active" id="damPanel">
+
+    <div class="mode-note">
+      <b class="mono">DAM —</b> all hourly prices for the selected day are published at once. Prices are built from randomized seasonal patterns — sometimes the peak is a summer afternoon AC surge, sometimes a winter morning-and-evening double hump. Any day you haven't traded yet re-rolls automatically when you open it.
+    </div>
+
+    <div class="day-row">
+      <div class="day-selector" id="damDaySelector"></div>
+      <button class="shuffle-week-btn" id="damShuffleBtn">Shuffle all 7 days</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">
+        <span>DAY-AHEAD PRICE CURVE — ₹/UNIT</span>
+        <span id="damSeasonBadge" class="season-badge mono">TYPICAL SHOULDER</span>
+      </div>
+      <svg class="chart" id="damChart" viewBox="0 0 900 240"></svg>
+      <div class="chart-legend">
+        <div class="legend-item"><span class="dot" style="background:var(--buy)"></span>Charging (buy)</div>
+        <div class="legend-item"><span class="dot" style="background:var(--sell)"></span>Discharging (sell)</div>
+        <div class="legend-item"><span class="dot" style="background:var(--peak)"></span>Peak</div>
+        <div class="legend-item"><span class="dot" style="background:var(--trough)"></span>Lowest</div>
+      </div>
+      <div class="chart-actions">
+        <button class="secondary-accent" id="damRandomizeBtn">Randomize this day</button>
+        <button id="damResetBtn">Reset this day (new curve)</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>SELECT YOUR HOURLY ACTIONS — click a block to cycle: idle → buy → sell</span></div>
+      <div class="hour-grid" id="damHourGrid"></div>
+    </div>
+
+    <div class="row">
+      <div class="panel">
+        <div class="panel-title"><span>BATTERY STATE</span></div>
+        <div class="battery-track"><div class="battery-fill" id="damBattFill"></div></div>
+        <div class="battery-caption"><span id="damBattLabel">0.0 / 6.0 MWh stored</span><span id="damBattPct">0%</span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span>TRADE SUMMARY</span></div>
+        <div class="stat-line"><span class="lbl">Energy bought</span><span class="val" id="damStatBuy">0.0 MWh · ₹0</span></div>
+        <div class="stat-line"><span class="lbl">Energy sold</span><span class="val" id="damStatSell">0.0 MWh · ₹0</span></div>
+        <div class="stat-line"><span class="lbl">Net P&amp;L</span><span class="val" id="damStatNet">₹0</span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="damRevealBtn">Reveal optimal strategy</button>
+    </div>
+    <div class="hint">Battery: 6 MWh capacity, max 1 MWh charge/discharge per hour, 90% round-trip efficiency.</div>
+
+    <div class="result-banner" id="damResultBanner"></div>
+
+  </div>
+
+  <!-- ============ RTM TAB ============ -->
+  <div class="tab-panel" id="rtmPanel">
+
+    <div class="mode-note rtm-note">
+      <b class="mono">RTM —</b> prices clear every 30 minutes. You only see the current block — pick Buy, Sell, or Hold and it locks in immediately and moves you to the next block. The peak marker on the chart only reflects blocks already cleared, since the future genuinely isn't visible yet.
+    </div>
+
+    <div class="day-row">
+      <div class="day-selector" id="rtmDaySelector"></div>
+      <button class="shuffle-week-btn" id="rtmShuffleBtn">Shuffle all 7 days</button>
+    </div>
+
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="rtmProgressFill"></div></div>
+      <div class="progress-caption mono" id="rtmProgressCaption">Block 1 of 48 · 0% through the day</div>
+    </div>
+
+    <div class="done-banner" id="rtmDoneBanner">Session complete — all 48 half-hour blocks traded for this day. Scroll down and click "Reveal hindsight-optimal" to see how you did.</div>
+    <div class="event-banner" id="rtmEventBanner"></div>
+
+    <div class="now-card">
+      <div>
+        <div class="now-time mono" id="rtmNowTime">BLOCK 1 OF 48 · 00:00–00:30</div>
+        <div class="now-price mono" id="rtmNowPrice">₹0.00</div>
+        <div class="now-batt mono" id="rtmNowBatt">Battery: 0.0 / 6.0 MWh</div>
+      </div>
+      <div class="now-actions-wrap">
+        <div class="now-actions">
+          <button class="act-btn buy-btn" id="rtmBuyBtn">Buy</button>
+          <button class="act-btn hold-btn" id="rtmHoldBtn">Hold</button>
+          <button class="act-btn sell-btn" id="rtmSellBtn">Sell</button>
+        </div>
+        <div class="now-actions-hint mono" id="rtmActionsHint">&nbsp;</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">
+        <span>LIVE PRICE TICKER — cleared blocks only</span>
+        <span id="rtmSeasonBadge" class="season-badge mono">TYPICAL SHOULDER</span>
+      </div>
+      <svg class="chart" id="rtmChart" viewBox="0 0 900 240"></svg>
+      <div class="rtm-strip" id="rtmStrip"></div>
+      <div class="chart-actions">
+        <button class="secondary-accent" id="rtmRandomizeBtn">Randomize this day</button>
+        <button id="rtmResetBtn">Reset this day (new curve)</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="panel">
+        <div class="panel-title"><span>BATTERY STATE</span></div>
+        <div class="battery-track"><div class="battery-fill" id="rtmBattFill"></div></div>
+        <div class="battery-caption"><span id="rtmBattLabel">0.0 / 6.0 MWh stored</span><span id="rtmBattPct">0%</span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span>TRADE SUMMARY</span></div>
+        <div class="stat-line"><span class="lbl">Energy bought</span><span class="val" id="rtmStatBuy">0.0 MWh · ₹0</span></div>
+        <div class="stat-line"><span class="lbl">Energy sold</span><span class="val" id="rtmStatSell">0.0 MWh · ₹0</span></div>
+        <div class="stat-line"><span class="lbl">Net P&amp;L</span><span class="val" id="rtmStatNet">₹0</span></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="rtmSkip6Btn">Skip 6 blocks (auto-hold, no trades)</button>
+      <button id="rtmRevealBtn" disabled>Reveal hindsight-optimal</button>
+    </div>
+    <div class="hint" id="rtmRevealHint">Same battery physics as DAM. "Reveal hindsight-optimal" unlocks once all 48 blocks are traded — keep clicking Buy / Hold / Sell to work through the day.</div>
+
+    <div class="result-banner" id="rtmResultBanner"></div>
+
+  </div>
+
+  <!-- ============ COMPARISON TAB ============ -->
+  <div class="tab-panel" id="cmpPanel">
+
+    <div class="mode-note cmp-note">
+      <b class="mono">Weekly comparison —</b> play any days you like in the DAM and RTM tabs, then come back here to see how planning ahead stacked up against reacting live, day by day.
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>DAM vs RTM — NET P&amp;L BY DAY</span></div>
+      <table class="cmp-table" id="cmpTable"></table>
+    </div>
+
+    <div class="panel" id="cmpNarrativePanel">
+      <div class="panel-title"><span>WHAT THIS SHOWS</span></div>
+      <div id="cmpNarrative" style="font-size:13px; line-height:1.6; color:var(--text-dim);"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const CAPACITY = 6;
+  const MAX_RATE = 1;
+  const EFFICIENCY = 0.90;
+  const DAYS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+
+  function fmtRs(n){
+    const r = Math.round(n);
+    return (r < 0 ? '-₹' : '₹') + Math.abs(r).toLocaleString('en-IN');
+  }
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function chance(p){ return Math.random() < p; }
+  function gaussian(h, center, width, height){ return height * Math.exp(-((h-center)*(h-center))/(2*width*width)); }
+  function hhmm(hFloat){
+    let h = Math.floor(hFloat) % 24;
+    let m = Math.round((hFloat - Math.floor(hFloat)) * 60);
+    if(m === 60){ m = 0; h = (h+1)%24; }
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+
+  function updateHeaderPnl(label, net){
+    document.getElementById('pnlLabel').textContent = label;
+    const pnlEl = document.getElementById('pnlValue');
+    pnlEl.textContent = fmtRs(net);
+    pnlEl.className = 'pnl-value mono ' + (net > 0 ? 'pos' : net < 0 ? 'neg' : 'zero');
+  }
+
+  function gradeFor(yourNet, optimalNet){
+    let pct;
+    if(optimalNet <= 0){ pct = yourNet >= optimalNet ? 100 : 0; }
+    else { pct = Math.max(0, Math.min(100, (yourNet/optimalNet)*100)); }
+    let label, color;
+    if(pct >= 95){ label = 'S — Master Trader'; color = 'var(--gradeS)'; }
+    else if(pct >= 80){ label = 'A — Sharp Trader'; color = 'var(--gradeA)'; }
+    else if(pct >= 60){ label = 'B — Solid Trader'; color = 'var(--gradeB)'; }
+    else if(pct >= 40){ label = 'C — Learning the Ropes'; color = 'var(--gradeC)'; }
+    else { label = 'D — Needs Practice'; color = 'var(--gradeD)'; }
+    return { pct, label, color };
+  }
+
+  /* ================= TABS ================= */
+  const tabDamBtn = document.getElementById('tabDamBtn');
+  const tabRtmBtn = document.getElementById('tabRtmBtn');
+  const tabCmpBtn = document.getElementById('tabCmpBtn');
+  const damPanel = document.getElementById('damPanel');
+  const rtmPanel = document.getElementById('rtmPanel');
+  const cmpPanel = document.getElementById('cmpPanel');
+
+  function activateTab(which){
+    [tabDamBtn,tabRtmBtn,tabCmpBtn].forEach(b=>b.classList.remove('active'));
+    [damPanel,rtmPanel,cmpPanel].forEach(p=>p.classList.remove('active'));
+    if(which === 'dam'){
+      tabDamBtn.classList.add('active'); damPanel.classList.add('active');
+      updateHeaderPnl(`DAM · ${DAYS[DAM.currentDay]} P&L`, DAM.computeStateForDay(DAM.currentDay).net);
+    } else if(which === 'rtm'){
+      tabRtmBtn.classList.add('active'); rtmPanel.classList.add('active');
+      updateHeaderPnl(`RTM · ${DAYS[RTM.currentDay]} P&L`, RTM.computeStateForDay(RTM.currentDay).net);
+    } else {
+      tabCmpBtn.classList.add('active'); cmpPanel.classList.add('active');
+      renderComparison();
+    }
+  }
+  tabDamBtn.addEventListener('click', () => activateTab('dam'));
+  tabRtmBtn.addEventListener('click', () => activateTab('rtm'));
+  tabCmpBtn.addEventListener('click', () => activateTab('cmp'));
+
+  /* ---------- Organic seasonal price generator ---------- */
+  const SEASONS = [
+    { key:'summer',  label:'Summer Heat',      color:'#F2843B' },
+    { key:'winter',  label:'Winter Chill',     color:'#6FD0DE' },
+    { key:'monsoon', label:'Monsoon Mild',     color:'#4CAF7D' },
+    { key:'shoulder',label:'Typical Shoulder', color:'#8496A8' },
+  ];
+
+  function buildDayPrices(blocksPerDay){
+    const season = pick(SEASONS);
+    let floor, solarDip=null, morningPeak=null, afternoonPeak=null, eveningPeak=null;
+
+    if(season.key === 'summer'){
+      floor = rand(2.8, 3.6);
+      if(chance(0.75)) solarDip = { center: rand(11.5,13.5), width: rand(2.5,4), depth: rand(1.0,2.2) };
+      if(chance(0.6))  afternoonPeak = { center: rand(13,16), width: rand(1.5,3), height: rand(2.5,6) };
+      eveningPeak = { center: rand(18,21), width: rand(1.5,2.5), height: rand(2,5) };
+    } else if(season.key === 'winter'){
+      floor = rand(2.6, 3.8);
+      if(chance(0.3)) solarDip = { center: rand(11,13), width: rand(2,3), depth: rand(0.4,1.1) };
+      if(chance(0.8)) morningPeak = { center: rand(7,9.5), width: rand(1,2), height: rand(1.5,3.5) };
+      eveningPeak = { center: rand(17.5,20), width: rand(1.5,2.5), height: rand(3,6.5) };
+    } else if(season.key === 'monsoon'){
+      floor = rand(2.0, 3.0);
+      if(chance(0.3)) solarDip = { center: rand(12,14), width: rand(2,3), depth: rand(0.2,0.7) };
+      eveningPeak = { center: rand(18,20.5), width: rand(2,3), height: rand(1,3) };
+    } else {
+      floor = rand(2.4, 3.4);
+      if(chance(0.85)) solarDip = { center: rand(12,14), width: rand(2.5,4), depth: rand(1.0,2.0) };
+      eveningPeak = { center: rand(17,20), width: rand(1.5,2.5), height: rand(2.5,5) };
+      if(chance(0.25)) morningPeak = { center: rand(7,9), width: rand(1,1.8), height: rand(1,2) };
+    }
+
+    const nightDipDepth = rand(0.4, 0.9);
+    const noiseScale = rand(0.15, 0.35);
+    const arr = [];
+    for(let b=0; b<blocksPerDay; b++){
+      const h = b/(blocksPerDay/24);
+      let v = floor;
+      v -= gaussian(h, 3, 2.2, nightDipDepth);
+      if(solarDip) v -= gaussian(h, solarDip.center, solarDip.width, solarDip.depth);
+      if(morningPeak) v += gaussian(h, morningPeak.center, morningPeak.width, morningPeak.height);
+      if(afternoonPeak) v += gaussian(h, afternoonPeak.center, afternoonPeak.width, afternoonPeak.height);
+      if(eveningPeak) v += gaussian(h, eveningPeak.center, eveningPeak.width, eveningPeak.height);
+      const noise = (Math.random()*2-1) * noiseScale;
+      arr.push(Math.max(1.0, +(v + noise).toFixed(2)));
+    }
+    return { prices: arr, season };
+  }
+
+  const EVENT_MESSAGES = [
+    { text: '⚠ Wind output dropped sharply — expect an upward price surprise.', mult: 1.35 },
+    { text: '⚠ Unexpected demand surge on the grid — prices spiking above forecast.', mult: 1.45 },
+    { text: '☀ Solar generation beat forecast — prices easing below plan.', mult: 0.72 },
+    { text: '⚠ A generating unit tripped — short supply crunch expected.', mult: 1.55 },
+    { text: '☀ Extra hydro released upstream — cheap surplus power available.', mult: 0.68 },
+  ];
+
+  function genEvents(priceArr){
+    const evs = new Array(priceArr.length).fill(null);
+    const evCount = 3 + Math.floor(Math.random()*4);
+    const used = new Set();
+    let tries = 0;
+    while(used.size < evCount && tries < 30){
+      tries++;
+      const idx = Math.floor(rand(2, priceArr.length-1));
+      if(used.has(idx)) continue;
+      used.add(idx);
+      const em = pick(EVENT_MESSAGES);
+      evs[idx] = em;
+      priceArr[idx] = Math.max(1.0, +(priceArr[idx]*em.mult).toFixed(2));
+    }
+    return evs;
+  }
+
+  /* ---------- shared chart drawing (with peak/trough annotation) ---------- */
+  function drawPriceChart(svgId, pr, actionsArr, opts){
+    // opts: { blocksPerDay, xLabelFn(idx)->hourFloat-ish label, upToIndex (for RTM reveal limit), pointLabelFn(idx)->"HH:MM" }
+    const svg = document.getElementById(svgId);
+    const n = pr.length;
+    const upTo = opts.upToIndex != null ? opts.upToIndex : n;
+    const W=900,H=240,padL=34,padR=10,padT=16,padB=30;
+    const innerW=W-padL-padR, innerH=H-padT-padB;
+    const maxP = Math.max(...pr)*1.1, minP=0;
+    const x = i => padL + (i/(n-1))*innerW;
+    const y = p => padT + innerH - ((p-minP)/(maxP-minP))*innerH;
+
+    let s = '';
+    [0,maxP/2,maxP].forEach(v=>{
+      const gy=y(v);
+      s += `<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#263442" stroke-width="1"/>`;
+      s += `<text x="${padL-6}" y="${gy+3}" text-anchor="end" font-size="9" fill="#566575" font-family="IBM Plex Mono">${v.toFixed(1)}</text>`;
+    });
+    opts.ticks.forEach(i=>{
+      s += `<text x="${x(i)}" y="${H-16}" text-anchor="middle" font-size="9" fill="#566575" font-family="IBM Plex Mono">${opts.tickLabel(i)}</text>`;
+    });
+
+    if(upTo > 0){
+      let path = `M ${x(0)} ${y(pr[0])}`;
+      for(let i=1;i<upTo;i++) path += ` L ${x(i)} ${y(pr[i])}`;
+      let area = path + ` L ${x(upTo-1)} ${y(0)} L ${x(0)} ${y(0)} Z`;
+      s += `<path d="${area}" fill="url(#${svgId}Grad)" opacity="0.5"/>`;
+      s += `<path d="${path}" fill="none" stroke="#8496A8" stroke-width="1.5"/>`;
+    }
+
+    for(let i=0;i<upTo;i++){
+      const cx=x(i), cy=y(pr[i]);
+      let fill='#39485A';
+      if(actionsArr[i]==='buy') fill='#45B8C9';
+      if(actionsArr[i]==='sell') fill='#F2843B';
+      s += `<circle cx="${cx}" cy="${cy}" r="3" fill="${fill}"/>`;
+      if(opts.events && opts.events[i]) s += `<circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="#C98BD9" stroke-width="1.2"/>`;
+    }
+
+    // peak / trough annotation over revealed range
+    if(upTo > 0){
+      let peakIdx=0, troughIdx=0;
+      for(let i=1;i<upTo;i++){
+        if(pr[i] > pr[peakIdx]) peakIdx = i;
+        if(pr[i] < pr[troughIdx]) troughIdx = i;
+      }
+      const pcx = x(peakIdx), pcy = y(pr[peakIdx]);
+      const tcx = x(troughIdx), tcy = y(pr[troughIdx]);
+      const peakLabel = `${opts.pointLabel(peakIdx)} · ₹${pr[peakIdx].toFixed(2)}`;
+      const troughLabel = `${opts.pointLabel(troughIdx)} · ₹${pr[troughIdx].toFixed(2)}`;
+
+      s += `<line x1="${pcx}" y1="${pcy}" x2="${pcx}" y2="${padT+innerH}" stroke="#F2843B" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>`;
+      s += `<circle cx="${pcx}" cy="${pcy}" r="4" fill="#F2843B"/>`;
+      const peakTextW = peakLabel.length * 5.6 + 12;
+      let peakBoxX = Math.min(Math.max(pcx - peakTextW/2, padL), W-padR-peakTextW);
+      let peakBoxY = Math.max(pcy - 26, padT);
+      s += `<rect x="${peakBoxX}" y="${peakBoxY}" width="${peakTextW}" height="17" rx="3" fill="#1C2733" stroke="#F2843B" stroke-width="0.8"/>`;
+      s += `<text x="${peakBoxX+peakTextW/2}" y="${peakBoxY+12}" text-anchor="middle" font-size="9.5" fill="#F2843B" font-family="IBM Plex Mono">PEAK ${peakLabel}</text>`;
+
+      if(troughIdx !== peakIdx){
+        s += `<line x1="${tcx}" y1="${tcy}" x2="${tcx}" y2="${padT+innerH}" stroke="#45B8C9" stroke-width="1" stroke-dasharray="3,3" opacity="0.7"/>`;
+        s += `<circle cx="${tcx}" cy="${tcy}" r="4" fill="#45B8C9"/>`;
+        const trTextW = troughLabel.length * 5.6 + 12;
+        let trBoxX = Math.min(Math.max(tcx - trTextW/2, padL), W-padR-trTextW);
+        let trBoxY = Math.max(tcy - 26, padT);
+        if(Math.abs(trBoxY - peakBoxY) < 20 && Math.abs(trBoxX - peakBoxX) < (peakTextW+trTextW)/2) trBoxY = peakBoxY + 22;
+        s += `<rect x="${trBoxX}" y="${trBoxY}" width="${trTextW}" height="17" rx="3" fill="#1C2733" stroke="#45B8C9" stroke-width="0.8"/>`;
+        s += `<text x="${trBoxX+trTextW/2}" y="${trBoxY+12}" text-anchor="middle" font-size="9.5" fill="#45B8C9" font-family="IBM Plex Mono">LOW ${troughLabel}</text>`;
+      }
+    }
+
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = `<defs><linearGradient id="${svgId}Grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8496A8" stop-opacity="0.30"/><stop offset="100%" stop-color="#8496A8" stop-opacity="0"/></linearGradient></defs>${s}`;
+  }
+
+  /* ================= DAM MODULE ================= */
+  const DAM = (function(){
+    const prices = [];
+    const seasonInfo = [];
+    const actions = Array.from({length:7}, () => new Array(24).fill('idle'));
+    const optimalByDay = {};
+    const gradeByDay = {};
+    let currentDay = 0;
+
+    function generateDay(d){
+      const g = buildDayPrices(24);
+      prices[d] = g.prices;
+      seasonInfo[d] = g.season;
+      actions[d] = new Array(24).fill('idle');
+      delete optimalByDay[d]; delete gradeByDay[d];
+    }
+    for(let d=0; d<7; d++) generateDay(d);
+
+    function isUntouched(d){ return actions[d].every(a => a === 'idle'); }
+
+    function computeStateForDay(d, actSeqOverride){
+      const seq = actSeqOverride || actions[d];
+      const pr = prices[d];
+      let soc=0, bought=0, boughtCost=0, sold=0, soldRev=0;
+      for(let h=0; h<24; h++){
+        const a = seq[h]; const p = pr[h];
+        if(a === 'buy'){ if(soc+MAX_RATE <= CAPACITY+1e-9){ soc+=MAX_RATE; bought+=MAX_RATE; boughtCost+=MAX_RATE*p; } }
+        else if(a === 'sell'){ if(soc-MAX_RATE >= -1e-9){ soc-=MAX_RATE; sold+=MAX_RATE*EFFICIENCY; soldRev+=MAX_RATE*EFFICIENCY*p; } }
+      }
+      return { soc, bought, boughtCost, sold, soldRev, net: soldRev-boughtCost };
+    }
+
+    function feasible(actSeq, h, newAct){
+      const test = actSeq.slice(); test[h] = newAct;
+      let soc=0;
+      for(let i=0;i<24;i++){
+        const a = test[i];
+        if(a==='buy'){ if(soc+MAX_RATE > CAPACITY+1e-9) return false; soc+=MAX_RATE; }
+        else if(a==='sell'){ if(soc-MAX_RATE < -1e-9) return false; soc-=MAX_RATE; }
+      }
+      return true;
+    }
+
+    function computeOptimal(d){
+      const pr = prices[d];
+      const idx = pr.map((p,i)=>({p,i}));
+      const cheap = [...idx].sort((a,b)=>a.p-b.p).slice(0,CAPACITY).map(x=>x.i);
+      const pricey = [...idx].sort((a,b)=>b.p-a.p).slice(0,CAPACITY).map(x=>x.i);
+      const opt = new Array(24).fill('idle');
+      cheap.forEach(i=>opt[i]='buy');
+      pricey.forEach(i=>{ if(opt[i]==='idle') opt[i]='sell'; });
+      let soc=0;
+      for(let h=0;h<24;h++){
+        if(opt[h]==='buy'){ if(soc+MAX_RATE > CAPACITY+1e-9) opt[h]='idle'; else soc+=MAX_RATE; }
+        else if(opt[h]==='sell'){ if(soc-MAX_RATE < -1e-9) opt[h]='idle'; else soc-=MAX_RATE; }
+      }
+      return opt;
+    }
+
+    function renderHourGrid(){
+      const d = currentDay;
+      const grid = document.getElementById('damHourGrid');
+      grid.innerHTML = '';
+      const opt = optimalByDay[d];
+      for(let h=0;h<24;h++){
+        const cell = document.createElement('div');
+        cell.className = 'hour-cell' + (actions[d][h] !== 'idle' ? ' '+actions[d][h] : '');
+        if(opt && opt[h] !== 'idle') cell.classList.add('optimal-mark');
+        cell.innerHTML = `
+          <div class="hr">${String(h).padStart(2,'0')}:00</div>
+          <div class="pr">₹${prices[d][h].toFixed(2)}</div>
+          <div class="act">${actions[d][h]==='idle' ? '' : (actions[d][h]==='buy' ? 'BUY' : 'SELL')}</div>
+        `;
+        cell.addEventListener('click', () => onCellClick(h));
+        grid.appendChild(cell);
+      }
+    }
+
+    function onCellClick(h){
+      const d = currentDay;
+      const order = ['idle','buy','sell'];
+      let next = order[(order.indexOf(actions[d][h])+1) % order.length];
+      let tries=0;
+      while(next!=='idle' && !feasible(actions[d], h, next) && tries<3){ next = order[(order.indexOf(next)+1)%order.length]; tries++; }
+      actions[d][h] = next;
+      render();
+    }
+
+    function renderDaySelector(){
+      const sel = document.getElementById('damDaySelector');
+      sel.innerHTML = '';
+      DAYS.forEach((label, d) => {
+        const pill = document.createElement('div');
+        pill.className = 'day-pill' + (d===currentDay ? ' active' : '');
+        const g = gradeByDay[d];
+        pill.innerHTML = `<span>${label}</span>` + (g ? `<span class="grade-dot" style="background:${g.color}"></span>` : '');
+        pill.addEventListener('click', () => {
+          if(d !== currentDay && isUntouched(d)) generateDay(d);
+          currentDay = d;
+          document.getElementById('damResultBanner').classList.remove('show');
+          render();
+        });
+        sel.appendChild(pill);
+      });
+    }
+
+    function render(){
+      const d = currentDay;
+      const st = computeStateForDay(d);
+      drawPriceChart('damChart', prices[d], actions[d], {
+        ticks: [0,4,8,12,16,20,23],
+        tickLabel: (h) => hhmm(h),
+        pointLabel: (h) => hhmm(h),
+      });
+      renderHourGrid();
+      renderDaySelector();
+      const badge = document.getElementById('damSeasonBadge');
+      badge.textContent = seasonInfo[d].label.toUpperCase();
+      badge.style.background = seasonInfo[d].color + '22';
+      badge.style.color = seasonInfo[d].color;
+      const pct = (st.soc/CAPACITY)*100;
+      document.getElementById('damBattFill').style.width = pct+'%';
+      document.getElementById('damBattLabel').textContent = `${st.soc.toFixed(1)} / ${CAPACITY.toFixed(1)} MWh stored`;
+      document.getElementById('damBattPct').textContent = Math.round(pct)+'%';
+      document.getElementById('damStatBuy').textContent = `${st.bought.toFixed(1)} MWh · ${fmtRs(st.boughtCost)}`;
+      document.getElementById('damStatSell').textContent = `${st.sold.toFixed(1)} MWh · ${fmtRs(st.soldRev)}`;
+      document.getElementById('damStatNet').textContent = fmtRs(st.net);
+      if(damPanel.classList.contains('active')) updateHeaderPnl(`DAM · ${DAYS[d]} P&L`, st.net);
+    }
+
+    document.getElementById('damRevealBtn').addEventListener('click', () => {
+      const d = currentDay;
+      const opt = computeOptimal(d);
+      optimalByDay[d] = opt;
+      const yourState = computeStateForDay(d);
+      const optState = computeStateForDay(d, opt);
+      const g = gradeFor(yourState.net, optState.net);
+      gradeByDay[d] = g;
+      const banner = document.getElementById('damResultBanner');
+      banner.classList.add('show');
+      const diff = optState.net - yourState.net;
+      let verdict = yourState.net >= optState.net - 1
+        ? "You matched (or beat) the optimal strategy. That's a genuinely strong trading day."
+        : `The optimal strategy captured ${fmtRs(diff)} more than your trades — white dots mark where it charged and discharged.`;
+      banner.innerHTML = `
+        <div class="grade-chip" style="background:${g.color}22; color:${g.color}; border:1px solid ${g.color};">
+          <span class="pct">${Math.round(g.pct)}%</span><span>${g.label}</span>
+        </div><br>
+        <div style="margin-bottom:6px; color:#8496A8; font-size:11.5px;">OPTIMAL STRATEGY (same battery, same day)</div>
+        Optimal P&amp;L: <b>${fmtRs(optState.net)}</b> &nbsp;·&nbsp; Your P&amp;L: <b>${fmtRs(yourState.net)}</b><br>
+        ${verdict}
+      `;
+      render();
+    });
+
+    document.getElementById('damResetBtn').addEventListener('click', () => {
+      generateDay(currentDay);
+      document.getElementById('damResultBanner').classList.remove('show');
+      render();
+    });
+
+    document.getElementById('damRandomizeBtn').addEventListener('click', () => {
+      generateDay(currentDay);
+      document.getElementById('damResultBanner').classList.remove('show');
+      render();
+    });
+
+    document.getElementById('damShuffleBtn').addEventListener('click', () => {
+      for(let d=0; d<7; d++) generateDay(d);
+      document.getElementById('damResultBanner').classList.remove('show');
+      render();
+    });
+
+    return { render, computeStateForDay, get currentDay(){ return currentDay; } };
+  })();
+
+
+  /* ================= RTM MODULE ================= */
+  const RTM = (function(){
+    const NBLOCKS = 48;
+    const prices = [];
+    const events = [];
+    const seasonInfo = [];
+    const actions = Array.from({length:7}, () => new Array(NBLOCKS).fill(null));
+    const cursor = new Array(7).fill(0);
+    const optimalByDay = {};
+    const gradeByDay = {};
+    let currentDay = 0;
+
+    function generateDay(d){
+      const g = buildDayPrices(NBLOCKS);
+      const scaled = g.prices.map(v => Math.max(1.0, +(v * rand(0.85,0.98)).toFixed(2)));
+      prices[d] = scaled;
+      seasonInfo[d] = g.season;
+      events[d] = genEvents(prices[d]);
+      actions[d] = new Array(NBLOCKS).fill(null);
+      cursor[d] = 0;
+      delete optimalByDay[d]; delete gradeByDay[d];
+    }
+    for(let d=0; d<7; d++) generateDay(d);
+
+    function isUntouched(d){ return cursor[d] === 0; }
+
+    function timeLabel(b){
+      const h = Math.floor(b/2), m = (b%2)*30;
+      const h2f = m===30 ? (h+1)%24 : h, m2 = m===30 ? 0 : 30;
+      const pad = n => String(n).padStart(2,'0');
+      return `${pad(h)}:${pad(m)}–${pad(h2f)}:${pad(m2)}`;
+    }
+    function blockStart(b){
+      const h = Math.floor(b/2), m = (b%2)*30;
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    function computeStateForDay(d, actSeqOverride){
+      const seq = (actSeqOverride || actions[d]).map(a => a || 'idle');
+      const pr = prices[d];
+      let soc=0, bought=0, boughtCost=0, sold=0, soldRev=0;
+      for(let b=0;b<NBLOCKS;b++){
+        const a = seq[b]; const p = pr[b];
+        if(a==='buy'){ if(soc+MAX_RATE <= CAPACITY+1e-9){ soc+=MAX_RATE; bought+=MAX_RATE; boughtCost+=MAX_RATE*p; } }
+        else if(a==='sell'){ if(soc-MAX_RATE >= -1e-9){ soc-=MAX_RATE; sold+=MAX_RATE*EFFICIENCY; soldRev+=MAX_RATE*EFFICIENCY*p; } }
+      }
+      return { soc, bought, boughtCost, sold, soldRev, net: soldRev-boughtCost };
+    }
+
+    function socBeforeCursor(d){
+      let soc=0;
+      for(let b=0;b<cursor[d];b++){
+        const a = actions[d][b];
+        if(a==='buy') soc+=MAX_RATE; else if(a==='sell') soc-=MAX_RATE;
+      }
+      return soc;
+    }
+
+    function computeOptimalHindsight(d){
+      const pr = prices[d];
+      const idx = pr.map((p,i)=>({p,i}));
+      const cheap = [...idx].sort((a,b)=>a.p-b.p).slice(0,CAPACITY*2).map(x=>x.i);
+      const pricey = [...idx].sort((a,b)=>b.p-a.p).slice(0,CAPACITY*2).map(x=>x.i);
+      const opt = new Array(NBLOCKS).fill('idle');
+      let buys=0; for(const i of cheap){ if(buys>=CAPACITY) break; opt[i]='buy'; buys++; }
+      let sells=0; for(const i of pricey){ if(sells>=CAPACITY) break; if(opt[i]==='idle'){ opt[i]='sell'; sells++; } }
+      let soc=0;
+      for(let b=0;b<NBLOCKS;b++){
+        if(opt[b]==='buy'){ if(soc+MAX_RATE>CAPACITY+1e-9) opt[b]='idle'; else soc+=MAX_RATE; }
+        else if(opt[b]==='sell'){ if(soc-MAX_RATE<-1e-9) opt[b]='idle'; else soc-=MAX_RATE; }
+      }
+      return opt;
+    }
+
+    function renderStrip(){
+      const d = currentDay;
+      const strip = document.getElementById('rtmStrip');
+      strip.innerHTML = '';
+      for(let b=0;b<NBLOCKS;b++){
+        const el = document.createElement('div');
+        let cls = 'rtm-block';
+        if(b > cursor[d]) cls += ' locked';
+        if(b === cursor[d]) cls += ' current';
+        if(actions[d][b]==='buy') cls += ' buy';
+        if(actions[d][b]==='sell') cls += ' sell';
+        el.className = cls;
+        el.title = b <= cursor[d] ? `${timeLabel(b)} · ₹${prices[d][b].toFixed(2)}` : 'Not yet revealed';
+        strip.appendChild(el);
+      }
+    }
+
+    function renderDaySelector(){
+      const sel = document.getElementById('rtmDaySelector');
+      sel.innerHTML = '';
+      DAYS.forEach((label, d) => {
+        const pill = document.createElement('div');
+        pill.className = 'day-pill' + (d===currentDay ? ' active' : '');
+        const g = gradeByDay[d];
+        pill.innerHTML = `<span>${label}</span>` + (g ? `<span class="grade-dot" style="background:${g.color}"></span>` : '');
+        pill.addEventListener('click', () => {
+          if(d !== currentDay && isUntouched(d)) generateDay(d);
+          currentDay = d;
+          document.getElementById('rtmResultBanner').classList.remove('show');
+          render();
+        });
+        sel.appendChild(pill);
+      });
+    }
+
+    function renderProgress(){
+      const d = currentDay;
+      const pct = Math.round((cursor[d]/NBLOCKS)*100);
+      document.getElementById('rtmProgressFill').style.width = pct + '%';
+      document.getElementById('rtmProgressCaption').textContent =
+        cursor[d] >= NBLOCKS ? `All 48 blocks traded · 100% through the day`
+        : `Block ${cursor[d]+1} of ${NBLOCKS} · ${pct}% through the day`;
+    }
+
+    function renderNowCard(){
+      const d = currentDay;
+      const done = cursor[d] >= NBLOCKS;
+      const buyBtn = document.getElementById('rtmBuyBtn');
+      const sellBtn = document.getElementById('rtmSellBtn');
+      const holdBtn = document.getElementById('rtmHoldBtn');
+      const skip6Btn = document.getElementById('rtmSkip6Btn');
+      const revealBtn = document.getElementById('rtmRevealBtn');
+      const doneBanner = document.getElementById('rtmDoneBanner');
+      const evBanner = document.getElementById('rtmEventBanner');
+      const hintEl = document.getElementById('rtmActionsHint');
+      const revealHint = document.getElementById('rtmRevealHint');
+
+      if(done){
+        document.getElementById('rtmNowTime').textContent = 'SESSION COMPLETE — 48 / 48 BLOCKS';
+        document.getElementById('rtmNowPrice').textContent = '—';
+        const finalSoc = socBeforeCursor(d);
+        document.getElementById('rtmNowBatt').textContent = `Battery: ${finalSoc.toFixed(1)} / ${CAPACITY.toFixed(1)} MWh`;
+        buyBtn.disabled = sellBtn.disabled = holdBtn.disabled = true;
+        skip6Btn.disabled = true;
+        revealBtn.disabled = false;
+        doneBanner.classList.add('show');
+        evBanner.classList.remove('show');
+        hintEl.innerHTML = '&nbsp;';
+        if(revealHint) revealHint.textContent = 'Same battery physics as DAM. Click "Reveal hindsight-optimal" below to see how your trades stacked up.';
+        return;
+      }
+      doneBanner.classList.remove('show');
+      revealBtn.disabled = true;
+      skip6Btn.disabled = false;
+      if(revealHint) revealHint.textContent = 'Same battery physics as DAM. "Reveal hindsight-optimal" unlocks once all 48 blocks are traded — keep clicking Buy / Hold / Sell to work through the day.';
+
+      document.getElementById('rtmNowTime').textContent = `BLOCK ${cursor[d]+1} OF ${NBLOCKS} · ${timeLabel(cursor[d])}`;
+      document.getElementById('rtmNowPrice').textContent = '₹' + prices[d][cursor[d]].toFixed(2);
+
+      const socNow = socBeforeCursor(d);
+      document.getElementById('rtmNowBatt').textContent = `Battery: ${socNow.toFixed(1)} / ${CAPACITY.toFixed(1)} MWh`;
+
+      const canBuy = socNow+MAX_RATE <= CAPACITY+1e-9;
+      const canSell = socNow-MAX_RATE >= -1e-9;
+      buyBtn.disabled = !canBuy;
+      sellBtn.disabled = !canSell;
+      holdBtn.disabled = false;
+
+      if(!canBuy) hintEl.textContent = 'Buy disabled — battery is full';
+      else if(!canSell) hintEl.textContent = 'Sell disabled — battery is empty';
+      else hintEl.innerHTML = '&nbsp;';
+
+      const ev = events[d][cursor[d]];
+      if(ev){ evBanner.textContent = ev.text; evBanner.classList.add('show'); }
+      else evBanner.classList.remove('show');
+    }
+
+    function renderStats(){
+      const d = currentDay;
+      const st = computeStateForDay(d);
+      const pct = (st.soc/CAPACITY)*100;
+      document.getElementById('rtmBattFill').style.width = pct+'%';
+      document.getElementById('rtmBattLabel').textContent = `${st.soc.toFixed(1)} / ${CAPACITY.toFixed(1)} MWh stored`;
+      document.getElementById('rtmBattPct').textContent = Math.round(pct)+'%';
+      document.getElementById('rtmStatBuy').textContent = `${st.bought.toFixed(1)} MWh · ${fmtRs(st.boughtCost)}`;
+      document.getElementById('rtmStatSell').textContent = `${st.sold.toFixed(1)} MWh · ${fmtRs(st.soldRev)}`;
+      document.getElementById('rtmStatNet').textContent = fmtRs(st.net);
+      const badge = document.getElementById('rtmSeasonBadge');
+      badge.textContent = seasonInfo[d].label.toUpperCase();
+      badge.style.background = seasonInfo[d].color + '22';
+      badge.style.color = seasonInfo[d].color;
+      if(rtmPanel.classList.contains('active')) updateHeaderPnl(`RTM · ${DAYS[d]} P&L`, st.net);
+    }
+
+    function render(){
+      const d = currentDay;
+      drawPriceChart('rtmChart', prices[d], actions[d].map(a=>a||'idle'), {
+        ticks: [0,8,16,24,32,40,47],
+        tickLabel: (b) => blockStart(b),
+        pointLabel: (b) => blockStart(b),
+        upToIndex: cursor[d],
+        events: events[d],
+      });
+      renderStrip();
+      renderProgress();
+      renderNowCard();
+      renderStats();
+      renderDaySelector();
+    }
+
+    function commitAction(action){
+      const d = currentDay;
+      if(cursor[d] >= NBLOCKS) return;
+      actions[d][cursor[d]] = action === 'hold' ? 'idle' : action;
+      cursor[d]++;
+      render();
+    }
+
+    document.getElementById('rtmBuyBtn').addEventListener('click', () => commitAction('buy'));
+    document.getElementById('rtmSellBtn').addEventListener('click', () => commitAction('sell'));
+    document.getElementById('rtmHoldBtn').addEventListener('click', () => commitAction('hold'));
+    document.getElementById('rtmSkip6Btn').addEventListener('click', () => {
+      const d = currentDay;
+      for(let i=0;i<6 && cursor[d]<NBLOCKS;i++){ commitAction('hold'); }
+    });
+
+    document.getElementById('rtmRevealBtn').addEventListener('click', () => {
+      const d = currentDay;
+      const opt = computeOptimalHindsight(d);
+      optimalByDay[d] = opt;
+      const yourState = computeStateForDay(d);
+      const optState = computeStateForDay(d, opt);
+      const g = gradeFor(yourState.net, optState.net);
+      gradeByDay[d] = g;
+      const banner = document.getElementById('rtmResultBanner');
+      banner.classList.add('show');
+      const diff = optState.net - yourState.net;
+      let verdict = yourState.net >= optState.net - 1
+        ? "You matched (or beat) the hindsight-optimal strategy — excellent reactive trading under uncertainty."
+        : `Knowing the full day in hindsight, the optimal strategy would have captured ${fmtRs(diff)} more. That gap is the real cost of trading blind, block by block.`;
+      banner.innerHTML = `
+        <div class="grade-chip" style="background:${g.color}22; color:${g.color}; border:1px solid ${g.color};">
+          <span class="pct">${Math.round(g.pct)}%</span><span>${g.label}</span>
+        </div><br>
+        <div style="margin-bottom:6px; color:#8496A8; font-size:11.5px;">HINDSIGHT-OPTIMAL (same battery, same day, seen in full afterwards)</div>
+        Optimal P&amp;L: <b>${fmtRs(optState.net)}</b> &nbsp;·&nbsp; Your P&amp;L: <b>${fmtRs(yourState.net)}</b><br>
+        ${verdict}
+      `;
+      // reveal full day on chart for hindsight view
+      drawPriceChart('rtmChart', prices[d], actions[d].map(a=>a||'idle'), {
+        ticks: [0,8,16,24,32,40,47],
+        tickLabel: (b) => blockStart(b),
+        pointLabel: (b) => blockStart(b),
+        upToIndex: NBLOCKS,
+        events: events[d],
+      });
+    });
+
+    document.getElementById('rtmResetBtn').addEventListener('click', () => {
+      generateDay(currentDay);
+      document.getElementById('rtmResultBanner').classList.remove('show');
+      render();
+    });
+
+    document.getElementById('rtmRandomizeBtn').addEventListener('click', () => {
+      generateDay(currentDay);
+      document.getElementById('rtmResultBanner').classList.remove('show');
+      render();
+    });
+
+    document.getElementById('rtmShuffleBtn').addEventListener('click', () => {
+      for(let d=0; d<7; d++) generateDay(d);
+      document.getElementById('rtmResultBanner').classList.remove('show');
+      render();
+    });
+
+    return { render, computeStateForDay, get currentDay(){ return currentDay; } };
+  })();
+
+  /* ================= COMPARISON TAB ================= */
+  function renderComparison(){
+    const table = document.getElementById('cmpTable');
+    let rows = `<tr><th>Day</th><th>DAM P&amp;L</th><th>RTM P&amp;L</th><th>Difference</th><th style="width:120px;">Relative</th></tr>`;
+    let totalDam = 0, totalRtm = 0, anyPlayed = false;
+    const maxAbs = Math.max(1, ...DAYS.map((_,d) => Math.max(
+      Math.abs(DAM.computeStateForDay(d).net), Math.abs(RTM.computeStateForDay(d).net)
+    )));
+    DAYS.forEach((label, d) => {
+      const damSt = DAM.computeStateForDay(d);
+      const rtmSt = RTM.computeStateForDay(d);
+      const damPlayed = damSt.bought > 0 || damSt.sold > 0;
+      const rtmPlayed = rtmSt.bought > 0 || rtmSt.sold > 0;
+      if(damPlayed) totalDam += damSt.net;
+      if(rtmPlayed) totalRtm += rtmSt.net;
+      if(damPlayed || rtmPlayed) anyPlayed = true;
+      const damBarW = Math.round((Math.abs(damSt.net)/maxAbs)*100);
+      const rtmBarW = Math.round((Math.abs(rtmSt.net)/maxAbs)*100);
+      const diff = rtmSt.net - damSt.net;
+      rows += `<tr>
+        <td>${label}</td>
+        <td>${damPlayed ? fmtRs(damSt.net) : '<span class="not-played">not played</span>'}</td>
+        <td>${rtmPlayed ? fmtRs(rtmSt.net) : '<span class="not-played">not played</span>'}</td>
+        <td>${(damPlayed||rtmPlayed) ? fmtRs(diff) : '—'}</td>
+        <td>
+          <div class="cmp-bar-wrap"><div class="cmp-bar dam" style="width:${damPlayed?damBarW:0}%"></div></div>
+          <div class="cmp-bar-wrap" style="margin-top:3px;"><div class="cmp-bar rtm" style="width:${rtmPlayed?rtmBarW:0}%"></div></div>
+        </td>
+      </tr>`;
+    });
+    rows += `<tr class="total-row">
+      <td>WEEK TOTAL</td><td>${fmtRs(totalDam)}</td><td>${fmtRs(totalRtm)}</td><td>${fmtRs(totalRtm-totalDam)}</td><td></td>
+    </tr>`;
+    table.innerHTML = rows;
+
+    const narrative = document.getElementById('cmpNarrative');
+    if(!anyPlayed){
+      narrative.innerHTML = `Play at least one day in the Day-Ahead and Real-Time tabs to see a real comparison here.`;
+    } else if(totalRtm > totalDam){
+      narrative.innerHTML = `Across the days you've played, <b>Real-Time trading edged out Day-Ahead</b> by ${fmtRs(totalRtm-totalDam)}. That can happen when grid events created sharp price spikes RTM let you react to — but remember RTM also carries more uncertainty; DAM lets you commit to a plan without surprises.`;
+    } else if(totalDam > totalRtm){
+      narrative.innerHTML = `Across the days you've played, <b>Day-Ahead planning outperformed Real-Time</b> by ${fmtRs(totalDam-totalRtm)}. This is common — seeing the whole day's prices in advance usually lets you time your battery more precisely than reacting block by block.`;
+    } else {
+      narrative.innerHTML = `Your DAM and RTM results are essentially tied so far — try a few more days to see which strategy tends to win under different price patterns.`;
+    }
+  }
+
+  DAM.render();
+  RTM.render();
+
+  if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
