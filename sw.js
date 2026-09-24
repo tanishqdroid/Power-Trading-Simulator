@@ -1,4 +1,4 @@
-const CACHE_NAME = "grid-arbitrage-v1";
+const CACHE_NAME = "grid-arbitrage-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -23,18 +23,19 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Network-first: always try to fetch the latest version first, and only
+// fall back to the cached copy if the network request fails (e.g. offline).
+// This prevents the app from getting "stuck" showing an old cached version
+// after you push an update.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-          return response;
-        })
-        .catch(() => cached);
-    })
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
