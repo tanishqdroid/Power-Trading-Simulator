@@ -231,7 +231,7 @@
   <div class="header">
     <div>
       <div class="brand-line"><span class="brand-mark"></span><h1>Grid Arbitrage</h1></div>
-      <div class="subtitle">Trade a 6 MWh battery against constantly-shifting IEX-style prices — seasonal peaks move around, so every day is a new read.</div>
+      <div class="subtitle">Trade a 20 MWh grid-scale battery against constantly-shifting IEX-style prices — seasonal peaks move around, so every day is a new read.</div>
     </div>
     <div class="pnl-block">
       <div class="pnl-label" id="pnlLabel">DAM · MON P&amp;L</div>
@@ -284,7 +284,7 @@
       <div class="panel">
         <div class="panel-title"><span>BATTERY STATE</span></div>
         <div class="battery-track"><div class="battery-fill" id="damBattFill"></div></div>
-        <div class="battery-caption"><span id="damBattLabel">0.0 / 6.0 MWh stored</span><span id="damBattPct">0%</span></div>
+        <div class="battery-caption"><span id="damBattLabel">0.0 / 20.0 MWh stored</span><span id="damBattPct">0%</span></div>
       </div>
       <div class="panel">
         <div class="panel-title"><span>TRADE SUMMARY</span></div>
@@ -297,7 +297,7 @@
     <div class="controls">
       <button class="primary" id="damRevealBtn">Reveal optimal strategy</button>
     </div>
-    <div class="hint">Battery: 6 MWh capacity, max 1 MWh charge/discharge per hour, 90% round-trip efficiency.</div>
+    <div class="hint">Battery: 20 MWh capacity (a typical small utility-scale unit), max 5 MWh charge/discharge per hour — a 4-hour-duration battery, the industry-standard spec — with 90% round-trip efficiency.</div>
 
     <div class="result-banner" id="damResultBanner"></div>
 
@@ -327,7 +327,7 @@
       <div>
         <div class="now-time mono" id="rtmNowTime">BLOCK 1 OF 48 · 00:00–00:30</div>
         <div class="now-price mono" id="rtmNowPrice">₹0.00</div>
-        <div class="now-batt mono" id="rtmNowBatt">Battery: 0.0 / 6.0 MWh</div>
+        <div class="now-batt mono" id="rtmNowBatt">Battery: 0.0 / 20.0 MWh</div>
       </div>
       <div class="now-actions-wrap">
         <div class="now-actions">
@@ -356,7 +356,7 @@
       <div class="panel">
         <div class="panel-title"><span>BATTERY STATE</span></div>
         <div class="battery-track"><div class="battery-fill" id="rtmBattFill"></div></div>
-        <div class="battery-caption"><span id="rtmBattLabel">0.0 / 6.0 MWh stored</span><span id="rtmBattPct">0%</span></div>
+        <div class="battery-caption"><span id="rtmBattLabel">0.0 / 20.0 MWh stored</span><span id="rtmBattPct">0%</span></div>
       </div>
       <div class="panel">
         <div class="panel-title"><span>TRADE SUMMARY</span></div>
@@ -399,8 +399,9 @@
 
 <script>
 (function(){
-  const CAPACITY = 6;
-  const MAX_RATE = 1;
+  const CAPACITY = 20;
+  const MAX_RATE = 5;
+  const UNIT_SCALE = 1000; // 1 MWh = 1000 units (IEX prices are quoted in ₹ per unit = ₹ per kWh)
   const EFFICIENCY = 0.90;
   const DAYS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
 
@@ -641,8 +642,8 @@
       let soc=0, bought=0, boughtCost=0, sold=0, soldRev=0;
       for(let h=0; h<24; h++){
         const a = seq[h]; const p = pr[h];
-        if(a === 'buy'){ if(soc+MAX_RATE <= CAPACITY+1e-9){ soc+=MAX_RATE; bought+=MAX_RATE; boughtCost+=MAX_RATE*p; } }
-        else if(a === 'sell'){ if(soc-MAX_RATE >= -1e-9){ soc-=MAX_RATE; sold+=MAX_RATE*EFFICIENCY; soldRev+=MAX_RATE*EFFICIENCY*p; } }
+        if(a === 'buy'){ if(soc+MAX_RATE <= CAPACITY+1e-9){ soc+=MAX_RATE; bought+=MAX_RATE; boughtCost+=MAX_RATE*p*UNIT_SCALE; } }
+        else if(a === 'sell'){ if(soc-MAX_RATE >= -1e-9){ soc-=MAX_RATE; sold+=MAX_RATE*EFFICIENCY; soldRev+=MAX_RATE*EFFICIENCY*p*UNIT_SCALE; } }
       }
       return { soc, bought, boughtCost, sold, soldRev, net: soldRev-boughtCost };
     }
@@ -835,8 +836,8 @@
       let soc=0, bought=0, boughtCost=0, sold=0, soldRev=0;
       for(let b=0;b<NBLOCKS;b++){
         const a = seq[b]; const p = pr[b];
-        if(a==='buy'){ if(soc+MAX_RATE <= CAPACITY+1e-9){ soc+=MAX_RATE; bought+=MAX_RATE; boughtCost+=MAX_RATE*p; } }
-        else if(a==='sell'){ if(soc-MAX_RATE >= -1e-9){ soc-=MAX_RATE; sold+=MAX_RATE*EFFICIENCY; soldRev+=MAX_RATE*EFFICIENCY*p; } }
+        if(a==='buy'){ if(soc+MAX_RATE <= CAPACITY+1e-9){ soc+=MAX_RATE; bought+=MAX_RATE; boughtCost+=MAX_RATE*p*UNIT_SCALE; } }
+        else if(a==='sell'){ if(soc-MAX_RATE >= -1e-9){ soc-=MAX_RATE; sold+=MAX_RATE*EFFICIENCY; soldRev+=MAX_RATE*EFFICIENCY*p*UNIT_SCALE; } }
       }
       return { soc, bought, boughtCost, sold, soldRev, net: soldRev-boughtCost };
     }
